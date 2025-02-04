@@ -91,20 +91,20 @@ class Assistant:
             pass
         config=Inst();
         config.messages = Inst()
-        config.messages.pressSpace = "Pressez sur espace pour parler puis relachez."
+        config.messages.pressSpace = "Press the space key to begin speaking and then release it."
         config.messages.loadingModel = "Loading model..."
-        config.messages.noAudioInput = "Erreur: Pas d'entrée son"
+        config.messages.noAudioInput = "Error: No audio input."
         config.whisperRecognition = Inst()
         config.whisperRecognition.modelPath = "whisper/large-v3.pt"
-        config.whisperRecognition.lang = "fr"
+        config.whisperRecognition.lang = "en"
         config.ollama = Inst()
         config.ollama.url = "http://localhost:11434/api/generate"
-        config.ollama.model = 'mistral'
+        config.ollama.model = 'deepseek-r1:7b'
         config.conversation = Inst()
-        config.conversation.context = "This is a discussion in french.\n"
-        config.conversation.greeting = "Je vous écoute."
-        config.conversation.recognitionWaitMsg = "J'interprète votre demande."
-        config.conversation.llmWaitMsg = "Laissez moi réfléchir."
+        config.conversation.context = "This is a discussion in English.\n"
+        config.conversation.greeting = "I am listening to you."
+        config.conversation.recognitionWaitMsg = "Yes."
+        config.conversation.llmWaitMsg = "Let me think."
         
         stream = open(INPUT_CONFIG_PATH, 'r', encoding="utf-8")
         dic = yaml.load(stream, Loader=Loader)
@@ -245,27 +245,8 @@ class Assistant:
 
     def text_to_speech(self, text):
         print(text)
-        tempPath = 'temp.wav'
-        #self.tts.say(text)
-        self.tts.save_to_file(text , tempPath)
+        self.tts.say(text)
         self.tts.runAndWait()
-        wf = wave.open(tempPath, 'rb')
-        # open stream based on the wave object which has been input.
-        stream = self.audio.open(format =
-                        self.audio.get_format_from_width(wf.getsampwidth()),
-                        channels = wf.getnchannels(),
-                        rate = wf.getframerate(),
-                        output = True)
-        chunkSize = 1024
-        chunk = wf.readframes(chunkSize)
-        while chunk:
-            stream.write(chunk)
-            tmp = np.array(np.frombuffer(chunk, np.int16), np.float32) * (1 / 32768.0)
-            energy_of_chunk = np.sqrt(np.mean(tmp**2))
-            self.display_sound_energy(energy_of_chunk)
-            chunk = wf.readframes(chunkSize)
-
-        wf.close()    
         self.display_message(text)
 
 def main():
