@@ -11,11 +11,15 @@ class OllamaClient:
         self.headers = {'Content-Type': 'application/json'}
         self.initial_context = context
         self.context_sent = False
+        # New member variable to control callback invocation.
+        self.callback_enabled = False
 
     def ask(self, prompt: str, conversation_context: list, callback):
         """
         Send a query to the Ollama API and stream the response via the callback.
         """
+        callback_enabled = False
+
         if not self.context_sent:
             full_prompt = self.initial_context + "\n" + prompt
             self.context_sent = True
@@ -50,10 +54,18 @@ class OllamaClient:
             # Flush output when punctuation is encountered.
             if token in [".", ":", "!", "?"]:
                 current_response = "".join(tokens)
-                callback(current_response)
+                if self.callback_enabled:
+                    callback(current_response)
                 tokens = []
+
+            # Check if the current line contains the "</think>" tag.
+            if "</think>" in token:
+                self.callback_enabled = True
+                tokens = []
+
             if 'error' in body:
-                callback("Error: " + body['error'])
+                if self.callback_enabled:
+                    callback("Error: " + body['error'])
             if body.get('done', False):
                 # Update the conversation context with the API response.
                 conversation_context[:] = body.get('context', conversation_context)

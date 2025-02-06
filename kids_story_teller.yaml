@@ -1,7 +1,7 @@
 messages:
   pressSpace: "Press the space key to begin speaking and then release it."
-  loadingModel: "Loading model..."
-  noAudioInput: "Error: No audio input."
+  loadingModel: "How are you today Ella?"
+  noAudioInput: "Sorry, I can't hear you."
 
 whisperRecognition:
   modelPath: "whisper/large-v3.pt"
@@ -12,7 +12,7 @@ ollama:
   model: "deepseek-r1:7b"
 
 conversation:
-  context: "you are a best-selling children's book writer."
-  greeting: "I am listening to you."
-  recognitionWaitMsg: "Yes."
+  context: "you are a best-selling children's book writer. could u write a 100 words story for a 5 year old girl? main characters are "
+  greeting: "What story do you want to hear?"
+  recognitionWaitMsg: "Just a moment..."
   llmWaitMsg: "Let me think."
