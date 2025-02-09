@@ -9,3 +9,5 @@ PyAudio==0.2.14
 pyyaml==6.0.1
 pygame==2.5.2
 pygame_gui==0.6.13
+diffusers==0.16.1
+accelerate==0.29.0

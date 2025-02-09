@@ -10,6 +10,10 @@ ollama:
   url: "http://localhost:11434/api/generate"
   model: "deepseek-r1:7b"
 
+stablediffusion:
+  modelName: "CompVis/stable-diffusion-v1-4"
+  device: "cpu"
+
 conversation:
   context: "you are a best-selling children's book writer. could u write a 100 words story for a 5 year old girl? main characters are "
   greeting: "How are you today Ella? Could you tell me whose story do you want to hear?"

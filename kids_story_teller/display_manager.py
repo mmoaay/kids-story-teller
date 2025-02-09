@@ -185,4 +185,15 @@ class DisplayManager:
         """
         Maintains the loop's frame rate.
         """
-        self.clock.tick(fps) 
+        self.clock.tick(fps)
+
+    def display_image_center_top(self, image):
+        """
+        Displays the image centered horizontally and aligned at the top of the screen.
+        """
+        screen_rect = self.screen.get_rect()
+        image_rect = image.get_rect()
+        image_rect.centerx = screen_rect.centerx  # Center image horizontally
+        image_rect.top = 0  # Set image to the top of the screen
+        self.screen.blit(image, image_rect)
+        pygame.display.update(image_rect) 

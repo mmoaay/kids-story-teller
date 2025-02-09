@@ -25,6 +25,7 @@ from speech_recognizer import SpeechRecognizer
 from tts_manager import TTSManager
 from ollama_client import OllamaClient
 from constants import INPUT_CONFIG_PATH
+from stable_diffusion_generator import StableDiffusionImageGenerator
 
 class KidsStoryTeller:
     """
@@ -71,6 +72,13 @@ class KidsStoryTeller:
         )
         self.conversation_context = []
 
+        # Initialize the stable diffusion image generator.
+        # Adjust modelName and device as appropriate.
+        self.sd_image_generator = StableDiffusionImageGenerator(
+            modelName=self.config.stablediffusion.modelName, 
+            device=self.config.stablediffusion.device
+        )
+
         # Initialize the keyboard monitor with the trigger key (here, the SPACE key).
         self.keyboard_monitor = KeyboardMonitor(trigger_key=pygame.K_SPACE)
 
@@ -115,6 +123,12 @@ class KidsStoryTeller:
 
         self.display_manager.display_message(self.config.conversation.llmWaitMsg + recognized_text)
         self.tts_manager.speak(self.config.conversation.llmWaitMsg + recognized_text)
+
+        # Generate an image using the local Stable Diffusion model.
+        generated_image = self.sd_image_generator.generate_image(recognized_text)
+        if generated_image:
+            # Optionally display the image using a dedicated display method.
+            self.display_manager.display_image_center_top(generated_image)
 
         self.ollama_client.ask(recognized_text, self.conversation_context, self._ollama_callback)
         self.display_manager.display_message(self.config.messages.pressSpace)

@@ -20,6 +20,10 @@ class Config:
         self.ollama.url = "http://localhost:11434/api/generate"
         self.ollama.model = 'deepseek-r1:7b'
 
+        self.stablediffusion = type("StableDiffusionConfig", (), {})()
+        self.stablediffusion.modelName = "CompVis/stable-diffusion-v1-4"
+        self.stablediffusion.device = "cpu"
+
         self.conversation = type("Conversation", (), {})()
         self.conversation.context = "This is a discussion in English.\n"
         self.conversation.greeting = "I am listening to you."
