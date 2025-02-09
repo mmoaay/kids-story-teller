@@ -17,6 +17,7 @@ except ImportError as e:
     raise ImportError("gTTS dependency is required. Please install it via 'pip install gTTS==2.2.3'") from e
 
 import tempfile
+import os
 
 try:
     from playsound import playsound
@@ -61,4 +62,4 @@ class TTSManager:
             print(f"Error playing sound: {e}")
         finally:
             # Clean up the temporary file.
-            os.remove(tmp_file) 
+            os.remove(tmp_file)
