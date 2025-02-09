@@ -9,7 +9,7 @@ whisperRecognition:
 
 ollama:
   url: "http://localhost:11434/api/generate"
-  model: "deepseek-r1:7b"
+  model: "deepseek-r1:8b"
 
 conversation:
   context: "you are a best-selling children's book writer. could u write a 100 words story for a 5 year old girl? main characters are "
