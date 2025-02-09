@@ -1,6 +1,10 @@
-import pyaudio
 import numpy as np
-from constants import INPUT_CHANNELS, INPUT_RATE, INPUT_CHUNK
+import pyaudio
+
+# Configuration parameters (adjust as needed)
+INPUT_CHANNELS = 1
+INPUT_RATE = 16000
+INPUT_CHUNK = 1024
 
 class AudioRecorder:
     """
@@ -9,45 +13,60 @@ class AudioRecorder:
     def __init__(self):
         self.audio = pyaudio.PyAudio()
         self.format = pyaudio.paInt16
+        self.stream = None
         # Test if the audio input device is available
         try:
-            stream = self.audio.open(format=self.format,
-                                     channels=INPUT_CHANNELS,
-                                     rate=INPUT_RATE,
-                                     input=True,
-                                     frames_per_buffer=INPUT_CHUNK)
-            stream.close()
+            self._open_stream()
+            self.stream.close()
         except Exception as e:
             raise RuntimeError(f"Error initializing audio input: {e}")
 
-    def record_audio(self, display_manager, trigger_key, pygame_module) -> np.ndarray:
+    def _open_stream(self):
+        self.stream = self.audio.open(
+            format=self.format,
+            channels=INPUT_CHANNELS,
+            rate=INPUT_RATE,
+            input=True,
+            frames_per_buffer=INPUT_CHUNK
+        )
+
+    def record_audio(self, should_continue_fn, display_energy_callback=None) -> np.ndarray:
         """
-        Record audio while the specified trigger key is held down.
-        Recording stops when the key is released.
+        Record audio data. Continue recording as long as should_continue_fn() returns True.
+
+        Parameters:
+            should_continue_fn: A callback function that returns a boolean to determine whether to continue recording.
+            display_energy_callback: Optional callable that receives the current sound energy. This can be used
+                                     to update a volume display (e.g. via DisplayManager.display_sound_energy).
+
+        Returns:
+            np.ndarray: Recorded audio data (normalized float32 array).
         """
-        display_manager.display_rec_start()
-        stream = self.audio.open(format=self.format,
-                                 channels=INPUT_CHANNELS,
-                                 rate=INPUT_RATE,
-                                 input=True,
-                                 frames_per_buffer=INPUT_CHUNK)
+        self._open_stream()
         frames = []
-        # Continue recording while the key is pressed.
-        while True:
-            pygame_module.event.pump()  # Process the event queue
-            pressed = pygame_module.key.get_pressed()
-            if pressed[trigger_key]:
-                data = stream.read(INPUT_CHUNK)
-                frames.append(data)
-            else:
+        while should_continue_fn():
+            try:
+                data = self.stream.read(INPUT_CHUNK, exception_on_overflow=False)
+            except Exception as e:
+                print(f"Error reading audio data: {e}")
                 break
-        stream.stop_stream()
-        stream.close()
+
+            # Calculate normalized RMS energy for the current audio chunk
+            raw = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+            normalized = raw / 32768.0
+            rms = np.sqrt(np.mean(normalized ** 2))
+            # Call the display energy callback if provided
+            if display_energy_callback is not None:
+                display_energy_callback(rms)
+
+            frames.append(data)
+        self.stream.stop_stream()
+        self.stream.close()
         waveform = np.frombuffer(b''.join(frames), dtype=np.int16).astype(np.float32) * (1/32768.0)
         return waveform
 
     def terminate(self):
         """
-        Terminate the PyAudio instance.
+        Clean up audio resources.
         """
         self.audio.terminate() 

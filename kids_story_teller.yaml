@@ -1,6 +1,5 @@
 messages:
   pressSpace: "Press the space key to begin speaking and then release it."
-  loadingModel: "How are you today Ella?"
   noAudioInput: "Sorry, I can't hear you."
 
 whisperRecognition:
@@ -9,10 +8,10 @@ whisperRecognition:
 
 ollama:
   url: "http://localhost:11434/api/generate"
-  model: "deepseek-r1:8b"
+  model: "deepseek-r1:7b"
 
 conversation:
   context: "you are a best-selling children's book writer. could u write a 100 words story for a 5 year old girl? main characters are "
-  greeting: "What story do you want to hear?"
-  recognitionWaitMsg: "Just a moment..."
-  llmWaitMsg: "Let me think."
+  greeting: "How are you today Ella? Could you tell me whose story do you want to hear?"
+  recognitionWaitMsg: "I'm listening to you."
+  llmWaitMsg: "Give me 10 seconds to think a story for you about"

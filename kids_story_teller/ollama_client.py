@@ -18,7 +18,7 @@ class OllamaClient:
         """
         Send a query to the Ollama API and stream the response via the callback.
         """
-        callback_enabled = False
+        self.callback_enabled = False
 
         if not self.context_sent:
             full_prompt = self.initial_context + "\n" + prompt
@@ -59,6 +59,7 @@ class OllamaClient:
                 tokens = []
 
             # Check if the current line contains the "</think>" tag.
+            # TODO don't hardcode the tag in case other models are used.
             if "</think>" in token:
                 self.callback_enabled = True
                 tokens = []

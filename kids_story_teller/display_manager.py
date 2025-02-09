@@ -1,73 +1,188 @@
 import pygame
-import pygame.locals
+import pygame_gui
 import numpy as np
 from constants import BACK_COLOR, REC_COLOR, TEXT_COLOR, REC_SIZE, FONT_SIZE, WIDTH, HEIGHT, KWIDTH, KHEIGHT, MAX_TEXT_LEN_DISPLAY
+import textwrap
 
 class DisplayManager:
     """
-    Handles display and drawing operations using Pygame.
+    Handles display and drawing operations using Pygame and pygame_gui.
     """
-    def __init__(self):
-        # Initialize the Pygame display surface and clock.
-        self.window_surface = pygame.display.set_mode((WIDTH, HEIGHT), 0, 32)
-        self.font = pygame.font.SysFont(None, FONT_SIZE)
+    def __init__(self, width=800, height=600):
+        pygame.init()
+        self.screen = pygame.display.set_mode((width, height))
         self.clock = pygame.time.Clock()
+        self.font = pygame.font.Font(None, 36)
+        # Initialize pygame_gui UI manager.
+        self.ui_manager = pygame_gui.UIManager((width, height))
+        # Placeholders for slider UI elements.
+        self.left_slider = None
+        self.right_slider = None
+        # Placeholders for image lists and selected indices.
+        self.left_images = []
+        self.right_images = []
+        self.left_index = 0
+        self.right_index = 0
 
     def set_icon(self, icon_path: str):
         """
         Set the window icon and caption.
         """
-        icon_image = pygame.image.load(icon_path)
-        pygame.display.set_icon(icon_image)
-        pygame.display.set_caption("Assistant")
+        icon = pygame.image.load(icon_path)
+        pygame.display.set_icon(icon)
+        pygame.display.set_caption("Kids Story Teller")
 
-    def display_message(self, text: str):
+    def create_image_sliders(self, left_images, right_images):
         """
-        Render and display a text message at the center of the screen.
+        Creates two horizontal slider components using pygame_gui for selecting images.
+        
+        Parameters:
+            left_images: List of pygame.Surface objects for the left slider.
+            right_images: List of pygame.Surface objects for the right slider.
         """
-        self.window_surface.fill(BACK_COLOR)
-        display_text = text if len(text) < MAX_TEXT_LEN_DISPLAY else text[0:MAX_TEXT_LEN_DISPLAY] + "..."
-        label = self.font.render(display_text, True, TEXT_COLOR)
-        label_rect = label.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-        self.window_surface.blit(label, label_rect)
-        pygame.display.flip()
+        self.left_images = left_images
+        self.right_images = right_images
+        screen_width, _ = self.screen.get_size()
+        slider_width = screen_width // 2 - 20
+        slider_height = 50
+        
+        # Create the left slider. Its value will represent the index into left_images.
+        if left_images:
+            self.left_slider = pygame_gui.elements.UIHorizontalSlider(
+                relative_rect=pygame.Rect((10, 10), (slider_width, slider_height)),
+                start_value=0,
+                value_range=(0, len(left_images) - 1),
+                manager=self.ui_manager,
+                object_id='#left_slider'
+            )
+        # Create the right slider similarly.
+        if right_images:
+            self.right_slider = pygame_gui.elements.UIHorizontalSlider(
+                relative_rect=pygame.Rect((screen_width // 2 + 10, 10), (slider_width, slider_height)),
+                start_value=0,
+                value_range=(0, len(right_images) - 1),
+                manager=self.ui_manager,
+                object_id='#right_slider'
+            )
 
-    def display_rec_start(self):
+    def process_ui_event(self, event):
         """
-        Display a red circle to indicate the start of recording.
+        Processes pygame events for the UI elements and updates image selection indices.
         """
-        self.window_surface.fill(BACK_COLOR)
-        pygame.draw.circle(self.window_surface, REC_COLOR, (WIDTH // 2, HEIGHT // 2), REC_SIZE)
+        if event.type == pygame_gui.UI_HORIZONTAL_SLIDER_MOVED:
+            if event.ui_object_id == '#left_slider':
+                # Update left image index (rounding the slider value).
+                self.left_index = int(event.value)
+            elif event.ui_object_id == '#right_slider':
+                self.right_index = int(event.value)
+        self.ui_manager.process_events(event)
+
+    def update_ui(self, time_delta):
+        """
+        Updates UI elements from pygame_gui.
+        """
+        self.ui_manager.update(time_delta)
+
+    def draw_ui(self):
+        """
+        Draws the UI elements (sliders) and displays the currently selected images below them.
+        """
+        # Let pygame_gui draw its UI.
+        self.ui_manager.draw_ui(self.screen)
+        screen_width, _ = self.screen.get_size()
+        
+        # Define display areas for the selected images (below sliders).
+        left_image_area = pygame.Rect(10, 70, screen_width // 2 - 20, 100)
+        right_image_area = pygame.Rect(screen_width // 2 + 10, 70, screen_width // 2 - 20, 100)
+        
+        # Draw the left selected image.
+        if self.left_images and 0 <= self.left_index < len(self.left_images):
+            img = self.left_images[self.left_index]
+            img_scaled = pygame.transform.scale(img, (left_image_area.width, left_image_area.height))
+            self.screen.blit(img_scaled, left_image_area.topleft)
+            
+        # Draw the right selected image.
+        if self.right_images and 0 <= self.right_index < len(self.right_images):
+            img = self.right_images[self.right_index]
+            img_scaled = pygame.transform.scale(img, (right_image_area.width, right_image_area.height))
+            self.screen.blit(img_scaled, right_image_area.topleft)
+        
+        pygame.display.update()
+
+    def display_message(self, message, color=(0, 0, 0)):
+        """
+        Clears the screen with a white background and displays a text message
+        at the bottom-center with automatic line wrapping.
+        """
+        self.screen.fill((255, 255, 255))
+        max_chars_per_line = 50
+        wrapped_lines = []
+        for line in message.splitlines():
+            wrapped_lines.extend(textwrap.wrap(line, width=max_chars_per_line))
+        
+        screen_width, screen_height = self.screen.get_size()
+        line_height = self.font.get_linesize()
+        total_text_height = len(wrapped_lines) * line_height
+        bottom_margin = 20
+        y_start = screen_height - total_text_height - bottom_margin
+        
+        for idx, line in enumerate(wrapped_lines):
+            text_surface = self.font.render(line, True, color)
+            x_position = (screen_width - text_surface.get_width()) / 2
+            y_position = y_start + idx * line_height
+            self.screen.blit(text_surface, (x_position, y_position))
+        
         pygame.display.flip()
 
     def display_sound_energy(self, energy: float):
         """
-        Visualize sound energy on the screen.
+        Clears the screen with a white background and visualizes the sound energy using
+        a complex, glowing radial effect. The effect consists of multiple concentric circles
+        whose sizes and opacities are based on the energy value. The visualization is centered
+        at the bottom of the screen.
+        
+        Parameters:
+            energy: A float in [0.0, 1.0] representing the current sound energy.
         """
-        col_count = 5
-        red_center = 150
-        factor = 10
-        max_amplitude = 100
+        # White background.
+        self.screen.fill((255, 255, 255))
+        screen_width, screen_height = self.screen.get_size()
+        bottom_margin = 20
 
-        self.window_surface.fill(BACK_COLOR)
-        amplitude = int(max_amplitude * energy)
-        hspace = 2 * KWIDTH
-        vspace = int(KHEIGHT / 2)
+        # Define base and maximum radius.
+        min_radius = 20
+        max_radius = 150
+        energy = min(max(energy, 0.0), 1.0)
+        # Interpolate the radius.
+        radius = int(min_radius + (max_radius - min_radius) * energy)
 
-        def rect_coords(x, y):
-            return (int(x - KWIDTH / 2), int(y - KHEIGHT / 2), KWIDTH, KHEIGHT)
+        # Center the circle at the bottom-center.
+        x_center = screen_width // 2
+        y_center = screen_height - bottom_margin - radius
 
-        center_x = WIDTH / 2
-        center_y = HEIGHT / 2
-        for idx in range(-int(np.floor(col_count / 2)), int(np.ceil(col_count / 2))):
-            x = center_x + (idx * hspace)
-            y = center_y
-            count = amplitude - 2 * abs(idx)
-            mid = int(np.ceil(count / 2))
-            for i in range(mid):
-                color = (red_center + (factor * (i % mid)), 0, 0)
-                offset = i * (KHEIGHT + vspace)
-                pygame.draw.rect(self.window_surface, color, rect_coords(x, y + offset))
-                # Draw a mirrored rectangle on the opposite side.
-                pygame.draw.rect(self.window_surface, color, rect_coords(x, y - offset))
-        pygame.display.flip() 
+        # Compute a base color that changes with energy.
+        base_color = (
+            int(255 * energy),            # Red increases with energy.
+            int(255 * (1 - energy)),        # Green decreases with energy.
+            100                           # Constant blue component.
+        )
+
+        # Draw multiple concentric circles for a glowing effect.
+        num_rings = 8
+        ring_spacing = 6
+        for i in range(num_rings):
+            ring_radius = radius + i * ring_spacing
+            alpha = max(0, 255 - i * 40)
+            temp_surface_size = ring_radius * 2 + 2
+            temp_surface = pygame.Surface((temp_surface_size, temp_surface_size), pygame.SRCALPHA)
+            pygame.draw.circle(temp_surface, base_color + (alpha,), (ring_radius, ring_radius), ring_radius)
+            self.screen.blit(temp_surface, (x_center - ring_radius, y_center - ring_radius))
+
+        pygame.draw.circle(self.screen, (0, 0, 0), (x_center, y_center), radius, 2)
+        pygame.display.flip()
+
+    def tick(self, fps=60):
+        """
+        Maintains the loop's frame rate.
+        """
+        self.clock.tick(fps) 
