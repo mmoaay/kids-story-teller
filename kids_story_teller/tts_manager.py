@@ -42,24 +42,3 @@ class TTSManager:
                 playsound(fp.name)
         except Exception as e:
             print(f"Error in TTS: {e}")
-
-    def speak_coqui(self, text: str):
-        """
-        Convert text to speech using Coqui TTS, play the generated audio, and print the text.
-        """
-        print(text)
-        # Create a temporary file to store the generated speech audio.
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as fp:
-            tmp_file = fp.name
-
-        # Synthesize speech from text and save the audio to the temporary file.
-        self.tts.tts_to_file(text=text, file_path=tmp_file)
-
-        try:
-            # Play the generated audio file.
-            playsound(tmp_file)
-        except Exception as e:
-            print(f"Error playing sound: {e}")
-        finally:
-            # Clean up the temporary file.
-            os.remove(tmp_file)

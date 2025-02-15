@@ -10,21 +10,38 @@ class OllamaClient:
         self.model = model
         self.headers = {'Content-Type': 'application/json'}
         self.initial_context = context
-        self.context_sent = False
-        # New member variable to control callback invocation.
+        # Removed the context_sent flag since it is no longer used.
+
+        # Flag to control callback invocation.
         self.callback_enabled = False
+
+        # Attributes to handle cancellation of ongoing requests.
+        self.current_response = None      # Store the currently active response object.
+        self.request_counter = 0          # Used to generate sequential tokens for requests.
+        self.current_token = None         # Token for the current request.
 
     def ask(self, prompt: str, conversation_context: list, callback):
         """
         Send a query to the Ollama API and stream the response via the callback.
+        If a new request comes in, the previous ongoing request is cancelled.
         """
+        # Cancel any ongoing request.
+        if self.current_response is not None:
+            try:
+                self.current_response.close()
+            except Exception:
+                pass
+            self.current_response = None
+
+        # Generate a new token for the current request.
+        self.request_counter += 1
+        current_token = self.request_counter
+        self.current_token = current_token
+
         self.callback_enabled = False
 
-        if not self.context_sent:
-            full_prompt = self.initial_context + "\n" + prompt
-            self.context_sent = True
-        else:
-            full_prompt = prompt
+        # Construct the full prompt (without using any context flag).
+        full_prompt = self.initial_context + "\n" + prompt
 
         payload = {
             "model": self.model,
@@ -36,31 +53,37 @@ class OllamaClient:
         try:
             response = requests.post(self.url, json=payload, headers=self.headers, stream=True)
             response.raise_for_status()
+            self.current_response = response  # Save the current active response object.
         except requests.RequestException as e:
             callback(f"Request error: {e}")
             return
 
         tokens = []
-        # Process the streamed response line by line.
+        # Iterate over each line of the streamed response.
         for line in response.iter_lines():
+            # Cancel processing if a new request has started (token mismatch).
+            if self.current_token != current_token:
+                break
+
             if not line:
                 continue
             try:
                 body = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            token = body.get('response', '')
-            tokens.append(token)
-            # Flush output when punctuation is encountered.
-            if token in [".", ":", "!", "?"]:
-                current_response = "".join(tokens)
+
+            token_str = body.get('response', '')
+            tokens.append(token_str)
+            
+            # Flush the output when encountering punctuation.
+            if token_str in [".", ":", "!", "?"]:
+                current_response_str = "".join(tokens)
                 if self.callback_enabled:
-                    callback(current_response)
+                    callback(current_response_str)
                 tokens = []
 
-            # Check if the current line contains the "</think>" tag.
-            # TODO don't hardcode the tag in case other models are used.
-            if "</think>" in token:
+            # Enable callback when the "</think>" tag appears.
+            if "</think>" in token_str:
                 self.callback_enabled = True
                 tokens = []
 
@@ -68,6 +91,10 @@ class OllamaClient:
                 if self.callback_enabled:
                     callback("Error: " + body['error'])
             if body.get('done', False):
-                # Update the conversation context with the API response.
+                # Update conversation context.
                 conversation_context[:] = body.get('context', conversation_context)
-                break 
+                break
+        
+        # If the current request has not been cancelled, clear the saved response.
+        if self.current_token == current_token:
+            self.current_response = None 

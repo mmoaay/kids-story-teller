@@ -2,27 +2,19 @@ import pygame
 import threading
 
 class KeyboardMonitor:
-    def __init__(self, trigger_key=pygame.K_SPACE):
+    def __init__(self, trigger_key):
         self.trigger_key = trigger_key
-        self._recording = False
-        self._lock = threading.Lock()
+        self._is_recording = False
 
-    def process_events(self):
+    def handle_event(self, event):
         """
-        Process pygame events and update the recording state.
-        This method should be called periodically in the main loop.
+        Directly process a single pygame event to update the recording state.
+        This method no longer polls the event queue on its own.
         """
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN and event.key == self.trigger_key:
-                with self._lock:
-                    self._recording = True
-            elif event.type == pygame.KEYUP and event.key == self.trigger_key:
-                with self._lock:
-                    self._recording = False
+        if event.type == pygame.KEYDOWN and event.key == self.trigger_key:
+            self._is_recording = True
+        elif event.type == pygame.KEYUP and event.key == self.trigger_key:
+            self._is_recording = False
 
-    def is_recording(self) -> bool:
-        """
-        Returns whether the trigger key is currently pressed.
-        """
-        with self._lock:
-            return self._recording 
+    def is_recording(self):
+        return self._is_recording 
