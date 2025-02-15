@@ -1,9 +1,10 @@
 # Kids Story Teller
 
-A kids' story teller application that leverages Whisper for offline speech recognition and interacts with a local instance of the Ollama API for generating text responses. This application combines several technologies:
+A kids' story teller application that leverages Whisper for offline speech recognition, interacts with a local instance of the Ollama API for generating text responses, and uses a locally installed Stable Diffusion model for image generation. This application combines several technologies:
 - **Speech Recognition:** Uses [Whisper](https://github.com/openai/whisper) for converting speech to text.
 - **Language Processing:** Integrates with [Ollama](https://ollama.ai/) for generating language responses.
-- **Text-to-Speech:** Employs [pyttsx3](https://pypi.org/project/pyttsx3/) for converting text to audible speech.
+- **Image Generation:** Utilizes a Stable Diffusion model through the [diffusers](https://huggingface.co/docs/diffusers/index) library with a cancellation mechanism to ensure that if a new image generation request arrives, the previous one is canceled.
+- **Text-to-Speech:** Uses [gTTS](https://gtts.readthedocs.io/) for converting text to audible speech.
 - **Graphical Interface:** Uses [Pygame](https://www.pygame.org/) for a basic visual interface.
 - **Configuration Management:** Supports YAML-based configuration for easy customization.
 
@@ -28,7 +29,8 @@ kids-story-teller/
 │   ├── display_manager.py       # Display and drawing module (using Pygame)
 │   ├── ollama_client.py         # Interacts with the Ollama API
 │   ├── speech_recognizer.py     # Speech recognition using Whisper
-│   └── tts_manager.py           # Text-to-Speech module (using pyttsx3)
+│   ├── tts_manager.py           # Text-to-Speech module (using gTTS)
+│   └── stable_diffusion_generator.py   # Image generation via Stable Diffusion with cancellation support
 │
 └── tests/                 # Unit tests
     ├── __init__.py
@@ -77,12 +79,15 @@ You can run the application using one of the following methods:
   kids-story-teller
   ```
 
-*Note:* Ensure that the icon file `kids_story_teller.png` is available in the expected location or update the icon path in `kids_story_teller.py` accordingly.
+For image generation, the system employs a cancellation mechanism so that if a new image generation request starts while a previous one is processing, the previous one will be cancelled.
+
+*Note:* Ensure that assets such as model files or icon files are available in the expected locations or update the paths accordingly in the code.
 
 ## Prerequisites
 
-- **CUDA:** If you plan to run Whisper on a GPU, make sure you have the appropriate CUDA drivers and libraries installed.
-- **Ollama:** Ensure that the Ollama server is installed and running locally.
+- **CUDA:** If you plan to run Whisper on a GPU, ensure that you have the appropriate CUDA drivers and libraries installed.
+- **Ollama:** Make sure the Ollama server is installed and running locally.
+- **Stable Diffusion & diffusers:** For image generation, ensure the corresponding model and requirements are available. A GPU or Apple M-series chip (using MPS) might be required for optimal performance.
 
 ## Testing
 
@@ -104,5 +109,6 @@ Contributions, issues, and feature requests are welcome! Feel free to open pull 
 
 - [OpenAI Whisper](https://github.com/openai/whisper)
 - [Ollama](https://ollama.ai/)
-- [pyttsx3](https://pypi.org/project/pyttsx3/)
+- [gTTS](https://gtts.readthedocs.io/)
 - [Pygame](https://www.pygame.org/)
+- [diffusers](https://huggingface.co/docs/diffusers/index)
