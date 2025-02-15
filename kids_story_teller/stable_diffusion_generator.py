@@ -31,8 +31,7 @@ class StableDiffusionImageGenerator:
             modelName,
             revision="fp16" if device != "cpu" else None,
             torch_dtype=torch.float16 if device != "cpu" else torch.float32,
-            low_cpu_mem_usage=True,
-            force_download=True
+            low_cpu_mem_usage=True
         )
 
 
@@ -53,7 +52,7 @@ class StableDiffusionImageGenerator:
             print("prompt: ", prompt)
             generated = self.pipe(
                 prompt,
-                num_inference_steps=1,
+                num_inference_steps=20,
                 height=256,
                 width=256
             )

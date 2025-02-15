@@ -36,17 +36,12 @@ class KidsStoryTeller:
         # Load configuration settings.
         self.config = Config(config_path)
 
-        # Initialize Pygame and the DisplayManager, and set the application icon.
+        # Initialize Pygame and the DisplayManager.
         pygame.init()
         self.display_manager = DisplayManager()
-        self.display_manager.set_icon("kids_story_teller.png")  # Change the icon file as needed
-
-        # Example usage in your main loop
-        left_images = [pygame.image.load("kids_story_teller.png"), pygame.image.load("kids_story_teller.png")]
-        right_images = [pygame.image.load("kids_story_teller.png"), pygame.image.load("kids_story_teller.png")]
-
-        # In your event loop or update routine:
-        self.display_manager.create_image_sliders(left_images, right_images)
+        # Set the window icon (retained as per request)
+        self.display_manager.set_icon("kids_story_teller.png")
+        self.display_manager.set_top_image("default_top_image.jpeg")
 
         # Initialize the TTS manager.
         self.tts_manager = TTSManager()
@@ -79,27 +74,26 @@ class KidsStoryTeller:
             device=self.config.stablediffusion.device
         )
 
-        # Initialize the keyboard monitor with the trigger key (here, the SPACE key).
+        # Initialize the keyboard monitor with the trigger key (here, using the SPACE key).
         self.keyboard_monitor = KeyboardMonitor(trigger_key=pygame.K_SPACE)
 
         # Greet the user.
-        self.display_manager.display_message(self.config.messages.pressSpace)
+        self.display_manager.set_message(self.config.messages.pressSpace)
         self.tts_manager.speak(self.config.conversation.greeting)
         
-
     def wait_exit(self):
         """
         Display an error message and wait for the user to quit.
         """
         while True:
-            self.display_manager.display_message(self.config.messages.noAudioInput)
+            self.display_manager.set_message(self.config.messages.noAudioInput)
+            self.display_manager.draw()
             self.display_manager.tick(60)
 
-            # Check for quit events using peek so the KeyboardMonitor doesn't consume them.
-            if pygame.event.peek(pygame.QUIT):
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        self.shutdown()
+            # Process all events; check for quit event.
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.shutdown()
 
     def shutdown(self):
         """
@@ -112,36 +106,34 @@ class KidsStoryTeller:
     def handle_push_to_talk(self):
         """
         Process audio recording, speech recognition, and API calls in a background thread.
-        The recording duration is controlled by the external keyboard events via keyboard_monitor.is_recording.
+        The recording duration is controlled by external keyboard events via keyboard_monitor.is_recording.
         """
-
         waveform = self.audio_recorder.record_audio(
             should_continue_fn=self.keyboard_monitor.is_recording,
-            display_energy_callback=self.display_manager.display_sound_energy
+            display_energy_callback=self.display_manager.set_energy
         )
         recognized_text = self.speech_recognizer.speech_to_text(waveform)
 
-        self.display_manager.display_message(self.config.conversation.llmWaitMsg + recognized_text)
+        self.display_manager.set_message(self.config.conversation.llmWaitMsg + recognized_text)
         self.tts_manager.speak(self.config.conversation.llmWaitMsg + recognized_text)
 
         # Generate an image using the local Stable Diffusion model.
         generated_image = self.sd_image_generator.generate_image(recognized_text)
         if generated_image:
-            # Optionally display the image using a dedicated display method.
-            self.display_manager.display_image_center_top(generated_image)
+            # Display the image in the top section of the layout.
+            self.display_manager.set_top_image(generated_image)
 
         self.ollama_client.ask(recognized_text, self.conversation_context, self._ollama_callback)
-        self.display_manager.display_message(self.config.messages.pressSpace)
+        self.display_manager.set_message(self.config.messages.pressSpace)
 
     def run(self):
         """
-        Main event loop:
-         - Uses KeyboardMonitor to listen for the trigger key.
-         - Records audio via AudioRecorder (recording time is controlled by the keyboard state).
-         - Processes speech recognition, TTS, and Ollama API calls.
-         - Handles quit events.
+        Main event loop which:
+         - Processes events including keyboard input and quit events.
+         - Forwards events to the DisplayManager for UI interactions.
+         - Records audio via the AudioRecorder when the keyboard trigger is active.
+         - Processes speech recognition, TTS, and API calls.
         """
-        # Flag to avoid repeatedly starting the recording thread.
         already_recording = False
 
         while True:
@@ -156,37 +148,35 @@ class KidsStoryTeller:
             # Update keyboard state.
             self.keyboard_monitor.process_events()
 
-            # When the trigger key is pressed, start a new recording thread (avoiding repeated starts).
+            # Start a recording thread if the trigger key is pressed and no recording is happening.
             if self.keyboard_monitor.is_recording() and not already_recording:
-                
-                self.display_manager.display_message(self.config.conversation.recognitionWaitMsg)
-
+                self.display_manager.set_message(self.config.conversation.recognitionWaitMsg)
                 already_recording = True
-                # Set daemon=True so that the thread won't block application exit.
                 threading.Thread(
                     target=self.handle_push_to_talk, daemon=True
                 ).start()
             elif not self.keyboard_monitor.is_recording():
                 already_recording = False
 
+            # Redraw the screen with the latest content and tick the clock.
+            self.display_manager.draw()
+            self.display_manager.tick(60)
+
     def _ollama_callback(self, text: str):
         """
-        Process the text returned from the Ollama API by speaking it and updating the display.
+        Process the response text from the Ollama API by updating the display and speaking the text.
         """
-        self.display_manager.display_message(text)
+        self.display_manager.set_message(text)
         self.tts_manager.speak(text)
-        
-
 
 def main():
     """
-    Entry point for the Kids Story Teller application.
+    The entry point for the Kids Story Teller application.
     """
     if sys.version_info < (3, 9):
         print("Warning: This application is recommended to run on Python 3.9 or higher.")
     app = KidsStoryTeller()
     app.run()
-
 
 if __name__ == "__main__":
     main() 
