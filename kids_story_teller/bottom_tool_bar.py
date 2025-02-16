@@ -9,36 +9,37 @@ DEBUG_DRAW = True
 class UICircularButton(pygame_gui.elements.UIButton):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # 清空主题生成的 image ，确保后续使用我们的方式来重建形象
+        # Clear the theme-generated image to ensure our custom rendering.
         self.image = None
 
     def update(self, time_delta):
-        # 先调用父类更新状态等逻辑
+        # Call the superclass update to process logic.
         super().update(time_delta)
         
-        # 根据当前状态重新生成圆形按钮的 image
+        # Recreate the button's image based on its current state.
         button_rect = self.relative_rect
         circular_surface = pygame.Surface(
             (button_rect.width, button_rect.height), pygame.SRCALPHA
         )
         
-        # 判断鼠标左键是否按下
-        # 注意：pygame.mouse.get_pressed()[0] 表示左键是否按下
+        # Determine the button state based on mouse hover and left-button press.
         if self.hovered and pygame.mouse.get_pressed()[0]:
-            color = (231, 151, 150)  # 按下状态颜色
+            color = (231, 151, 150)  # Color for pressed state.
         elif self.hovered:
-            color = (255, 178, 132)  # 悬停状态颜色
+            color = (255, 178, 132)  # Color for hover state.
         else:
-            color = (255, 201, 136)  # 普通状态颜色
+            color = (255, 201, 136)  # Color for normal state.
 
-        # 更新按钮的图像，用于后续 UIManager 的 draw_ui 调用
-        self.image = circular_surface
-        
-        # 绘制圆形背景
+        # Draw circular background.
         pygame.draw.circle(
-            circular_surface, color, (button_rect.width // 2, button_rect.height // 2), button_rect.width // 2
+            circular_surface,
+            color,
+            (button_rect.width // 2, button_rect.height // 2),
+            button_rect.width // 2,
         )
         
+        # Update the button's image for UIManager's draw_ui call.
+        self.image = circular_surface
 
 class BottomToolBar:
     """
@@ -54,14 +55,14 @@ class BottomToolBar:
         self.width = screen_width
         self.height = toolbar_height
 
-        # Save layout constants for later use.
+        # Store layout constants for later use.
         self.pad = pad
         self.button_size = button_size
 
         # Define the toolbar area.
         self.rect = pygame.Rect(0, screen_height - toolbar_height, screen_width, toolbar_height)
 
-        # Create a UI Manager for the toolbar area.
+        # Create a UIManager for the toolbar area.
         self.ui_manager = pygame_gui.UIManager((self.width, self.height))
 
         # Create left and right circular buttons using the custom UICircularButton.
@@ -76,7 +77,7 @@ class BottomToolBar:
             manager=self.ui_manager
         )
 
-        # Define the center message area that stretches between the two buttons.
+        # Define the center message area stretching between the two buttons.
         message_x = self.left_button.relative_rect.right
         message_width = self.right_button.relative_rect.left - message_x
         self.message_rect = pygame.Rect(message_x, pad, message_width, toolbar_height - 2 * pad)
@@ -87,20 +88,20 @@ class BottomToolBar:
         self.message = message
 
     def process_events(self, event):
-        # Let the pygame_gui manager process events.
+        # Delegate event processing to the pygame_gui manager.
         self.ui_manager.process_events(event)
 
     def draw(self, surface, energy: float):
-        # 创建工具栏专用的 surface，背景颜色为 #B0BEAF (RGB: 176, 190, 175)
+        # Create a dedicated toolbar surface with background color (209, 220, 226).
         toolbar_surface = pygame.Surface((self.width, self.height))
         toolbar_surface.fill((209, 220, 226))
     
-        # 更新并绘制 UI 按钮。
+        # Update and render UI buttons.
         time_delta = 1.0 / 60.0
         self.ui_manager.update(time_delta)
         self.ui_manager.draw_ui(toolbar_surface)
     
-        # 渲染并显示中间的消息文本。
+        # Render and display the center message text.
         if self.message:
             max_chars = 20
             lines = []
