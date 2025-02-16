@@ -6,7 +6,7 @@ class KeyboardMonitor:
         self.trigger_key = trigger_key
         self._is_recording = False
 
-    def handle_event(self, event):
+    def process_events(self, event):
         """
         Directly process a single pygame event to update the recording state.
         This method no longer polls the event queue on its own.

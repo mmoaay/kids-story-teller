@@ -7,6 +7,7 @@ class SpeechRecognizer:
     """
     def __init__(self, model_path: str, language: str):
         # Load the Whisper model from the specified path.
+        print(model_path)
         self.model = whisper.load_model(model_path)
         self.language = language
 

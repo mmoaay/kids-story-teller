@@ -1,3 +1,4 @@
+import time
 import warnings
 import multiprocessing.resource_tracker as resource_tracker
 
@@ -33,53 +34,83 @@ class KidsStoryTeller:
     Display, audio recording, keyboard monitoring, speech recognition, TTS, and API calls.
     """
     def __init__(self, config_path=INPUT_CONFIG_PATH):
-        # Load configuration settings.
+        # Measure Config initialization time.
+        start_time = time.time()
         self.config = Config(config_path)
+        print("[Init] Config initialization took {:.3f} seconds".format(time.time() - start_time))
 
-        # Initialize Pygame and the DisplayManager.
+        # Measure pygame initialization.
+        start_time = time.time()
         pygame.init()
+        print("[Init] pygame.init() took {:.3f} seconds".format(time.time() - start_time))
+
+        # Measure DisplayManager initialization.
+        start_time = time.time()
         self.display_manager = DisplayManager()
-        # Set the window icon (retained as per request)
         self.display_manager.set_icon("kids_story_teller.png")
         self.display_manager.set_top_image("default_top_image.jpeg")
+        print("[Init] DisplayManager initialization took {:.3f} seconds".format(time.time() - start_time))
 
-        # Initialize the TTS manager.
-        self.tts_manager = TTSManager()
+        # Measure KeyboardMonitor initialization.
+        start_time = time.time()
+        self.keyboard_monitor = KeyboardMonitor(trigger_key=pygame.K_SPACE)
+        print("[Init] KeyboardMonitor initialization took {:.3f} seconds".format(time.time() - start_time))
 
-        # Greet the user.
-        self.display_manager.set_message(self.config.messages.pressSpace)
-        # Disabled speech invocation:
-        self.tts_manager.speak(self.config.conversation.greeting)
-        
         # Initialize the audio recording module; exit if an error occurs.
+        start_time = time.time()
         try:
             self.audio_recorder = AudioRecorder()
         except RuntimeError as e:
             print(e)
             self.wait_exit()
+        print("[Init] AudioRecorder initialization took {:.3f} seconds".format(time.time() - start_time))
 
-        # Initialize the speech recognizer.
-        self.speech_recognizer = SpeechRecognizer(
-            self.config.whisper_recognition.modelPath,
-            self.config.whisper_recognition.lang
-        )
-
-        # Initialize the Ollama API client.
+        # Measure OllamaClient initialization.
+        start_time = time.time()
         self.ollama_client = OllamaClient(
             self.config.ollama.url,
             self.config.ollama.model,
             self.config.conversation.context
         )
         self.conversation_context = []
+        print("[Init] OllamaClient initialization took {:.3f} seconds".format(time.time() - start_time))
 
-        # Initialize the stable diffusion image generator.
-        self.sd_image_generator = StableDiffusionImageGenerator(
-            modelName=self.config.stablediffusion.modelName, 
-            device=self.config.stablediffusion.device
-        )
+        # Offload SpeechRecognizer initialization to a background thread.
+        def init_speech_recognizer():
+            sr_start = time.time()
+            self.speech_recognizer = SpeechRecognizer(
+                self.config.whisper_recognition.modelPath,
+                self.config.whisper_recognition.lang
+            )
+            print("[Init] SpeechRecognizer initialization took {:.3f} seconds (background)".format(time.time() - sr_start))
+        threading.Thread(target=init_speech_recognizer, daemon=True).start()
 
-        # Initialize the keyboard monitor with the trigger key (here, using the SPACE key).
-        self.keyboard_monitor = KeyboardMonitor(trigger_key=pygame.K_SPACE)
+        # Offload StableDiffusionImageGenerator initialization to a background thread.
+        def init_sd_generator():
+            sd_start = time.time()
+            self.sd_image_generator = StableDiffusionImageGenerator(
+                modelName=self.config.stablediffusion.modelName, 
+                device=self.config.stablediffusion.device
+            )
+            print("[Init] StableDiffusionImageGenerator initialization took {:.3f} seconds (background)".format(time.time() - sd_start))
+        threading.Thread(target=init_sd_generator, daemon=True).start()
+
+        # Measure TTSManager initialization.
+        start_time = time.time()
+        self.tts_manager = TTSManager()
+        print("[Init] TTSManager initialization took {:.3f} seconds".format(time.time() - start_time))
+
+        # Greet the user.
+        start_time = time.time()
+        self.display_manager.set_message(self.config.messages.pressSpace)
+        print("[Init] display_manager.set_message(pressSpace) took {:.3f} seconds".format(time.time() - start_time))
+        # Offload tts_manager.speak to a background thread to avoid UI blockage.
+        def speak_greeting():
+            self.tts_manager.speak(self.config.conversation.greeting)
+            print("[Init] tts_manager.speak(greeting) finished in {:.3f} seconds (background)".format(time.time() - greet_start))
+        greet_start = time.time()
+        threading.Thread(target=speak_greeting, daemon=True).start()
+
 
     def wait_exit(self):
         """
@@ -170,10 +201,10 @@ class KidsStoryTeller:
                 if event.type == pygame.QUIT:
                     self.shutdown()
                 # Forward events to the DisplayManager (which in turn delegates to the bottom toolbar)
-                self.display_manager.handle_event(event)
+                self.display_manager.process_events(event)
 
                 # Update keyboard state.
-                self.keyboard_monitor.handle_event(event)
+                self.keyboard_monitor.process_events(event)
 
             # Start a recording thread if the trigger key is pressed and no recording is happening.
             if self.keyboard_monitor.is_recording() and not already_recording:
