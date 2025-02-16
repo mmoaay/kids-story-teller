@@ -119,7 +119,6 @@ class KidsStoryTeller:
         while True:
             self.display_manager.set_message(self.config.messages.noAudioInput)
             self.display_manager.draw()
-            self.display_manager.tick(60)
 
             # Process all events; check for quit event.
             for event in pygame.event.get():
@@ -193,8 +192,6 @@ class KidsStoryTeller:
         already_recording = False
 
         while True:
-            self.display_manager.tick(60)
-            
             # Get and process all events once.
             events = pygame.event.get()
             for event in events:
@@ -217,7 +214,6 @@ class KidsStoryTeller:
                 already_recording = False
 
             self.display_manager.draw()
-            self.display_manager.tick(60)
 
     def _ollama_callback(self, text: str):
         """

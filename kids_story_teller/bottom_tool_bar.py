@@ -22,29 +22,23 @@ class UICircularButton(pygame_gui.elements.UIButton):
             (button_rect.width, button_rect.height), pygame.SRCALPHA
         )
         
-        # 根据状态选择颜色
-        if self.held or self.pressed:
-            color = (231,151,150)  # pressed state color
+        # 判断鼠标左键是否按下
+        # 注意：pygame.mouse.get_pressed()[0] 表示左键是否按下
+        if self.hovered and pygame.mouse.get_pressed()[0]:
+            color = (231, 151, 150)  # 按下状态颜色
         elif self.hovered:
-            color = (255,178,132)  # hovered state color
+            color = (255, 178, 132)  # 悬停状态颜色
         else:
-            color = (255,201,136)  # normal state color
+            color = (255, 201, 136)  # 普通状态颜色
+
+        # 更新按钮的图像，用于后续 UIManager 的 draw_ui 调用
+        self.image = circular_surface
         
-        # 绘制圆形背景和边框
+        # 绘制圆形背景
         pygame.draw.circle(
             circular_surface, color, (button_rect.width // 2, button_rect.height // 2), button_rect.width // 2
         )
         
-        # 在圆形中绘制文字（如果有）
-        # if self.text is not None:
-        #     text_surface = self.text.get_surface()
-        #     text_rect = text_surface.get_rect(
-        #         center=(button_rect.width // 2, button_rect.height // 2)
-        #     )
-        #     circular_surface.blit(text_surface, text_rect)
-        
-        # 将新生成的图像赋值给 self.image ，UIManager 的 draw_ui 会用到它
-        self.image = circular_surface
 
 class BottomToolBar:
     """
@@ -89,68 +83,22 @@ class BottomToolBar:
         self.message = ""
         self.font = pygame.font.Font(None, 24)
 
-        # Callbacks for button events (to be set externally).
-        self.left_button_callback = None
-        self.right_button_press_callback = None    # Called when the right button is pressed.
-        self.right_button_release_callback = None    # Called when the right button is released.
-
-        # Attributes for left button click visual effect.
-        self.left_click_effect_active = False
-        self.left_click_effect_start = 0
-        self.left_effect_duration = 200  # Duration in milliseconds
-
     def set_message(self, message: str):
         self.message = message
 
     def process_events(self, event):
         # Let the pygame_gui manager process events.
         self.ui_manager.process_events(event)
-        
-        # Check for button events from pygame_gui.
-        if event.type == pygame.USEREVENT:
-            if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
-                if DEBUG_DRAW:
-                    print(f"DEBUG: UI_BUTTON_PRESSED for element: {event.ui_element}")
-                if event.ui_element == self.left_button:
-                    if self.left_button_callback:
-                        self.left_button_callback()
-                    # Activate click effect by recording current time.
-                    self.left_click_effect_active = True
-                    self.left_click_effect_start = pygame.time.get_ticks()
-                elif event.ui_element == self.right_button:
-                    if DEBUG_DRAW:
-                        print("DEBUG: Right button pressed")
-                    if self.right_button_press_callback:
-                        self.right_button_press_callback()
-            elif event.user_type == pygame_gui.UI_BUTTON_RELEASED:
-                if DEBUG_DRAW:
-                    print(f"DEBUG: UI_BUTTON_RELEASED for element: {event.ui_element}")
-                if event.ui_element == self.right_button:
-                    if DEBUG_DRAW:
-                        print("DEBUG: Right button released")
-                    if self.right_button_release_callback:
-                        self.right_button_release_callback()
 
     def draw(self, surface, energy: float):
         # 创建工具栏专用的 surface，背景颜色为 #B0BEAF (RGB: 176, 190, 175)
         toolbar_surface = pygame.Surface((self.width, self.height))
-        toolbar_surface.fill((176, 190, 175))
+        toolbar_surface.fill((209, 220, 226))
     
         # 更新并绘制 UI 按钮。
         time_delta = 1.0 / 60.0
         self.ui_manager.update(time_delta)
         self.ui_manager.draw_ui(toolbar_surface)
-    
-        # 如果左侧按钮点击的效果处于激活状态，则绘制效果层。
-        if self.left_click_effect_active:
-            current_time = pygame.time.get_ticks()
-            elapsed = current_time - self.left_click_effect_start
-            if elapsed < self.left_effect_duration:
-                overlay = pygame.Surface((self.button_size, self.button_size), pygame.SRCALPHA)
-                overlay.fill((255, 255, 255, 100))
-                toolbar_surface.blit(overlay, (self.pad, self.pad))
-            else:
-                self.left_click_effect_active = False
     
         # 渲染并显示中间的消息文本。
         if self.message:

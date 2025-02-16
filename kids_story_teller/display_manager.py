@@ -74,8 +74,5 @@ class DisplayManager:
             pygame.draw.rect(self.screen, self.bg_color, pygame.Rect(0, 0, self.screen.get_width(), top_area_height))
         
         self.bottom_toolbar.draw(self.screen, self.current_energy)
-        pygame.event.pump()
-        pygame.display.update()
 
-    def tick(self, fps=60):
-        self.clock.tick(fps)
+        pygame.display.update()
